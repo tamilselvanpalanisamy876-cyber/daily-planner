@@ -1,72 +1,131 @@
 import React, { useMemo } from 'react';
 import Card from './Card';
-import { Lightbulb, ArrowRight } from 'lucide-react';
+import { Lightbulb, Zap, Target, Clock } from 'lucide-react';
+import { generateSmartSuggestions, learnUserPatterns, calculateSmartPriority } from '../utils/smartLogic';
 
 const SmartSuggestions = ({ tasks, user }) => {
     const suggestions = useMemo(() => {
-        const suggs = [];
+        // Learn from user patterns
+        const patterns = learnUserPatterns();
 
-        // 1. Priority Check
-        const highPriority = tasks.filter(t => t.priority === 'high' && t.status !== 'completed');
-        if (highPriority.length > 0) {
-            suggs.push({
-                type: 'priority',
-                text: `Tackle "${highPriority[0].title}" first - it's high priority!`,
-                icon: '🔥'
+        // Get AI-like smart suggestions
+        const smartSuggs = generateSmartSuggestions(tasks, patterns);
+
+        // Add priority-based suggestions
+        const sortedByPriority = tasks
+            .filter(t => t.status !== 'completed')
+            .map(t => ({ ...t, smartScore: calculateSmartPriority(t) }))
+            .sort((a, b) => b.smartScore - a.smartScore);
+
+        if (sortedByPriority.length > 0) {
+            const topTask = sortedByPriority[0];
+            smartSuggs.unshift({
+                type: 'top-priority',
+                icon: '🎯',
+                message: `Top priority: ${topTask.title}`,
+                task: topTask
             });
         }
 
-        // 2. Streak/Habit Check
-        if (user?.streak > 0 && user?.streak < 3) {
-            suggs.push({
-                type: 'habit',
-                text: "Keep your streak alive! Complete a task today.",
-                icon: '⚡'
+        // Add pattern-based insight
+        if (patterns.mostProductiveHour) {
+            const hour = patterns.mostProductiveHour;
+            const currentHour = new Date().getHours();
+            if (Math.abs(currentHour - hour) <= 1) {
+                smartSuggs.push({
+                    type: 'peak-time',
+                    icon: '⚡',
+                    message: `Peak productivity time! You usually excel now.`
+                });
+            }
+        }
+
+        // Add completion rate insight
+        if (patterns.completionRate < 50) {
+            smartSuggs.push({
+                type: 'motivation',
+                icon: '💪',
+                message: `Let's boost that completion rate! Start with one small task.`
             });
-        } else if (user?.streak === 0) {
-            suggs.push({
-                type: 'habit',
-                text: "Start a new streak today! You got this.",
-                icon: '🌱'
+        } else if (patterns.completionRate > 80) {
+            smartSuggs.push({
+                type: 'celebration',
+                icon: '🎉',
+                message: `Amazing! ${Math.round(patterns.completionRate)}% completion rate!`
             });
         }
 
-        // 3. Quick Wins (Low priority but easy)
-        const lowPriority = tasks.filter(t => t.priority === 'low' && t.status !== 'completed');
-        if (lowPriority.length > 0 && highPriority.length === 0) {
-            suggs.push({
-                type: 'quick',
-                text: `Need a quick win? Try "${lowPriority[0].title}".`,
-                icon: '✨'
-            });
-        }
-
-        // 4. Empty State
-        if (tasks.length === 0) {
-            suggs.push({
-                type: 'empty',
-                text: "Plan your day! Add 3 main tasks to get started.",
-                icon: '📝'
-            });
-        }
-
-        return suggs.slice(0, 3); // Show top 3 suggestions
+        return smartSuggs.slice(0, 4); // Show top 4
     }, [tasks, user]);
 
-    if (suggestions.length === 0) return null;
+    if (suggestions.length === 0) {
+        return (
+            <Card style={{
+                background: 'linear-gradient(135deg, var(--ios-blue)20, var(--ios-purple)20)',
+                border: '1px solid var(--ios-blue)40',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+                    <Lightbulb size={20} color="var(--ios-yellow)" />
+                    <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Smart Suggestions</h3>
+                </div>
+                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+                    Add some tasks to get personalized suggestions! 📝
+                </p>
+            </Card>
+        );
+    }
 
     return (
-        <Card className="glass-panel" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <Lightbulb size={20} color="#fbbf24" />
-                <h3 style={{ fontSize: '1.1rem' }}>Smart Suggestions</h3>
+        <Card style={{
+            background: 'linear-gradient(135deg, var(--ios-blue)20, var(--ios-purple)20)',
+            border: '1px solid var(--ios-blue)40',
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+                <Lightbulb size={20} color="var(--ios-yellow)" />
+                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Smart Suggestions</h3>
+                <span style={{
+                    marginLeft: 'auto',
+                    background: 'var(--ios-blue)',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                }}>
+                    AI-Like
+                </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
                 {suggestions.map((sugg, index) => (
-                    <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', fontSize: '0.95rem' }}>
-                        <span>{sugg.icon}</span>
-                        <span style={{ color: 'var(--text-primary)' }}>{sugg.text}</span>
+                    <div
+                        key={index}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 'var(--space-sm)',
+                            padding: 'var(--space-sm)',
+                            background: 'var(--bg-secondary)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--text-tertiary)',
+                        }}
+                    >
+                        <span style={{ fontSize: '1.5rem' }}>{sugg.icon}</span>
+                        <div style={{ flex: 1 }}>
+                            <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                                {sugg.message}
+                            </p>
+                            {sugg.type && (
+                                <span style={{
+                                    fontSize: '0.75rem',
+                                    color: 'var(--text-secondary)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                }}>
+                                    {sugg.type.replace('-', ' ')}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>
