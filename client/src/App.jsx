@@ -10,21 +10,25 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import WeeklyReview from './pages/WeeklyReview';
 
+import { ThemeProvider } from './context/ThemeContext';
+
 function App() {
     return (
         <AuthProvider>
-            <TaskProvider>
-                <Router>
-                    <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                        <Route path="/focus" element={<ProtectedRoute><Focus /></ProtectedRoute>} />
-                        <Route path="/review" element={<ProtectedRoute><WeeklyReview /></ProtectedRoute>} />
-                    </Routes>
-                </Router>
-            </TaskProvider>
+            <ThemeProvider>
+                <TaskProvider>
+                    <Router>
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/register" element={<Register />} />
+                            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                            <Route path="/focus" element={<ProtectedRoute><Focus /></ProtectedRoute>} />
+                            <Route path="/review" element={<ProtectedRoute><WeeklyReview /></ProtectedRoute>} />
+                        </Routes>
+                    </Router>
+                </TaskProvider>
+            </ThemeProvider>
         </AuthProvider>
     );
 }
