@@ -1,327 +1,180 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
 import AuthContext from '../context/AuthContext';
 import TaskContext from '../context/TaskContext';
-import Button from '../components/Button';
-import SmartInput from '../components/SmartInput';
-import TaskCard from '../components/TaskCard';
-import ThemeToggle from '../components/ThemeToggle';
-import { LogOut, Zap, Calendar as CalendarIcon, Bell } from 'lucide-react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { LogOut } from 'lucide-react';
 
 const Dashboard = () => {
     const { user, logout } = useContext(AuthContext);
-    const { tasks, addTask, updateTask, deleteTask, fetchTasks } = useContext(TaskContext);
-    const [notifications, setNotifications] = useState([]);
-    const [isScheduling, setIsScheduling] = useState(false);
+    const { tasks, addTask, updateTask, deleteTask } = useContext(TaskContext);
+    const [newTask, setNewTask] = useState('');
 
-    // Fetch notifications on mount
-    useEffect(() => {
-        fetchNotifications();
-    }, []);
-
-    const fetchNotifications = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/api/tasks/notifications`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setNotifications(response.data);
-        } catch (error) {
-            console.error('Error fetching notifications:', error);
-        }
-    };
-
-    const handleAutoSchedule = async () => {
-        setIsScheduling(true);
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.post(
-                `${API_URL}/api/tasks/auto-schedule`,
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            console.log('Auto-schedule result:', response.data);
-            await fetchTasks(); // Refresh tasks
-            alert(`✅ Scheduled ${response.data.scheduledTasks.length} tasks!`);
-        } catch (error) {
-            console.error('Error auto-scheduling:', error);
-            alert('❌ Error scheduling tasks');
-        } finally {
-            setIsScheduling(false);
-        }
-    };
-
-    const handleTaskCreate = async (parsedData) => {
-        try {
-            await addTask(parsedData);
-            await fetchNotifications(); // Refresh notifications
-        } catch (error) {
-            console.error('Error creating task:', error);
-        }
-    };
-
-    const handleStatusChange = async (taskId, newStatus) => {
-        try {
-            await updateTask(taskId, { status: newStatus });
-        } catch (error) {
-            console.error('Error updating task:', error);
-        }
-    };
-
-    const handleDelete = async (taskId) => {
-        if (window.confirm('Delete this task?')) {
+    const handleAddTask = async (e) => {
+        e.preventDefault();
+        if (newTask.trim()) {
             try {
-                await deleteTask(taskId);
+                await addTask({ title: newTask });
+                setNewTask('');
             } catch (error) {
-                console.error('Error deleting task:', error);
+                alert('Failed to add task');
             }
         }
     };
 
-    // Separate tasks by status
-    const backlogTasks = tasks.filter(t => t.status === 'Backlog').sort((a, b) => b.priorityScore - a.priorityScore);
-    const scheduledTasks = tasks.filter(t => t.status === 'Scheduled').sort((a, b) => {
-        if (!a.scheduledTime || !b.scheduledTime) return 0;
-        return a.scheduledTime.localeCompare(b.scheduledTime);
-    });
-    const doneTasks = tasks.filter(t => t.status === 'Done');
+    const handleToggle = async (task) => {
+        try {
+            await updateTask(task._id, { completed: !task.completed });
+        } catch (error) {
+            alert('Failed to update task');
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Delete this task?')) {
+            try {
+                await deleteTask(id);
+            } catch (error) {
+                alert('Failed to delete task');
+            }
+        }
+    };
 
     return (
-        <div style={{ padding: '1rem', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{
+            maxWidth: '600px',
+            margin: '0 auto',
+            padding: '2rem',
+            fontFamily: 'Arial, sans-serif'
+        }}>
             {/* Header */}
-            <header style={{
+            <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: 'var(--space-lg)',
-                padding: 'var(--space-md)',
-                background: 'var(--bg-secondary)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-sm)',
+                marginBottom: '2rem'
             }}>
-                <div>
-                    <h1 style={{
-                        margin: 0,
-                        background: 'linear-gradient(135deg, var(--ios-blue), var(--ios-purple))',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                    }}>
-                        LogicFlow
-                    </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
-                        Mathematical AI Planner • Welcome, {user?.username}!
+                <h1 style={{ margin: 0 }}>To-Do List</h1>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <span>Hi, {user?.username}!</span>
+                    <button
+                        onClick={logout}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <LogOut size={16} style={{ verticalAlign: 'middle' }} /> Logout
+                    </button>
+                </div>
+            </div>
+
+            {/* Add Task Form */}
+            <form onSubmit={handleAddTask} style={{ marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                        type="text"
+                        value={newTask}
+                        onChange={(e) => setNewTask(e.target.value)}
+                        placeholder="Add a new task..."
+                        style={{
+                            flex: 1,
+                            padding: '0.75rem',
+                            fontSize: '1rem',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px'
+                        }}
+                    />
+                    <button
+                        type="submit"
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        Add
+                    </button>
+                </div>
+            </form>
+
+            {/* Task List */}
+            <div>
+                {tasks.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: '#666' }}>
+                        No tasks yet. Add one above!
                     </p>
-                </div>
-
-                <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-                    <ThemeToggle />
-                    <Button variant="secondary" onClick={logout} style={{
-                        padding: '0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                    }}>
-                        <LogOut size={20} />
-                    </Button>
-                </div>
-            </header>
-
-            {/* Context Notification Bar */}
-            {notifications.length > 0 && (
-                <div style={{
-                    background: 'linear-gradient(135deg, var(--ios-orange), var(--ios-red))',
-                    color: 'white',
-                    padding: 'var(--space-md)',
-                    borderRadius: 'var(--radius-lg)',
-                    marginBottom: 'var(--space-lg)',
-                    boxShadow: 'var(--shadow-md)',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
-                        <Bell size={20} />
-                        <strong>Context Notifications</strong>
-                    </div>
-                    {notifications.map((notif, idx) => (
-                        <div key={idx} style={{
-                            padding: 'var(--space-sm)',
-                            background: 'rgba(255, 255, 255, 0.2)',
-                            borderRadius: 'var(--radius-sm)',
-                            marginBottom: idx < notifications.length - 1 ? 'var(--space-xs)' : 0,
-                        }}>
-                            {notif.message}
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Smart Input */}
-            <SmartInput onTaskCreate={handleTaskCreate} />
-
-            {/* Auto-Schedule Button */}
-            <div style={{ marginBottom: 'var(--space-lg)', textAlign: 'center' }}>
-                <button
-                    onClick={handleAutoSchedule}
-                    disabled={isScheduling || backlogTasks.length === 0}
-                    style={{
-                        padding: 'var(--space-md) var(--space-xl)',
-                        borderRadius: 'var(--radius-lg)',
-                        border: 'none',
-                        background: 'linear-gradient(135deg, var(--ios-green), var(--ios-teal))',
-                        color: 'white',
-                        fontWeight: '600',
-                        fontSize: '1rem',
-                        cursor: backlogTasks.length > 0 ? 'pointer' : 'not-allowed',
-                        opacity: backlogTasks.length > 0 ? 1 : 0.5,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 'var(--space-sm)',
-                        boxShadow: 'var(--shadow-md)',
-                    }}
-                >
-                    <Zap size={20} />
-                    {isScheduling ? 'Scheduling...' : `Auto-Schedule ${backlogTasks.length} Tasks`}
-                </button>
-            </div>
-
-            {/* Main Grid: Backlog | Scheduled */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-                gap: 'var(--space-lg)',
-            }}>
-                {/* Left Column: BACKLOG */}
-                <div>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 'var(--space-sm)',
-                        marginBottom: 'var(--space-md)',
-                        padding: 'var(--space-sm)',
-                        background: 'var(--ios-orange)20',
-                        borderRadius: 'var(--radius-md)',
-                    }}>
-                        <CalendarIcon size={20} color="var(--ios-orange)" />
-                        <h2 style={{ margin: 0, fontSize: '1.3rem' }}>Backlog</h2>
-                        <span style={{
-                            marginLeft: 'auto',
-                            background: 'var(--ios-orange)',
-                            color: 'white',
-                            padding: '4px 12px',
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                        }}>
-                            {backlogTasks.length}
-                        </span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-                        {backlogTasks.length > 0 ? (
-                            backlogTasks.map(task => (
-                                <TaskCard
-                                    key={task._id}
-                                    task={task}
-                                    onStatusChange={handleStatusChange}
-                                    onDelete={handleDelete}
-                                />
-                            ))
-                        ) : (
-                            <div style={{
-                                padding: 'var(--space-xl)',
-                                textAlign: 'center',
-                                color: 'var(--text-secondary)',
-                                background: 'var(--bg-tertiary)',
-                                borderRadius: 'var(--radius-md)',
-                            }}>
-                                No tasks in backlog. Add one above! 📝
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Right Column: SCHEDULED (THE PLAN) */}
-                <div>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 'var(--space-sm)',
-                        marginBottom: 'var(--space-md)',
-                        padding: 'var(--space-sm)',
-                        background: 'var(--ios-blue)20',
-                        borderRadius: 'var(--radius-md)',
-                    }}>
-                        <Zap size={20} color="var(--ios-blue)" />
-                        <h2 style={{ margin: 0, fontSize: '1.3rem' }}>The Plan</h2>
-                        <span style={{
-                            marginLeft: 'auto',
-                            background: 'var(--ios-blue)',
-                            color: 'white',
-                            padding: '4px 12px',
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                        }}>
-                            {scheduledTasks.length}
-                        </span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-                        {scheduledTasks.length > 0 ? (
-                            scheduledTasks.map(task => (
-                                <TaskCard
-                                    key={task._id}
-                                    task={task}
-                                    onStatusChange={handleStatusChange}
-                                    onDelete={handleDelete}
-                                />
-                            ))
-                        ) : (
-                            <div style={{
-                                padding: 'var(--space-xl)',
-                                textAlign: 'center',
-                                color: 'var(--text-secondary)',
-                                background: 'var(--bg-tertiary)',
-                                borderRadius: 'var(--radius-md)',
-                            }}>
-                                No scheduled tasks. Click "Auto-Schedule" above! ⚡
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Completed Tasks (Collapsible) */}
-            {doneTasks.length > 0 && (
-                <details style={{ marginTop: 'var(--space-lg)' }}>
-                    <summary style={{
-                        padding: 'var(--space-md)',
-                        background: 'var(--ios-green)20',
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        color: 'var(--ios-green)',
-                    }}>
-                        ✅ Completed Tasks ({doneTasks.length})
-                    </summary>
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                        gap: 'var(--space-md)',
-                        marginTop: 'var(--space-md)',
-                    }}>
-                        {doneTasks.map(task => (
-                            <TaskCard
-                                key={task._id}
-                                task={task}
-                                onStatusChange={handleStatusChange}
-                                onDelete={handleDelete}
+                ) : (
+                    tasks.map(task => (
+                        <div
+                            key={task._id}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                padding: '1rem',
+                                marginBottom: '0.5rem',
+                                background: '#f8f9fa',
+                                borderRadius: '4px',
+                                border: '1px solid #ddd'
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={task.completed}
+                                onChange={() => handleToggle(task)}
+                                style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    cursor: 'pointer'
+                                }}
                             />
-                        ))}
-                    </div>
-                </details>
-            )}
+                            <span
+                                style={{
+                                    flex: 1,
+                                    textDecoration: task.completed ? 'line-through' : 'none',
+                                    color: task.completed ? '#999' : '#000'
+                                }}
+                            >
+                                {task.title}
+                            </span>
+                            <button
+                                onClick={() => handleDelete(task._id)}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: '#dc3545',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Stats */}
+            <div style={{
+                marginTop: '2rem',
+                padding: '1rem',
+                background: '#e9ecef',
+                borderRadius: '4px',
+                textAlign: 'center'
+            }}>
+                <strong>Total:</strong> {tasks.length} tasks |
+                <strong> Completed:</strong> {tasks.filter(t => t.completed).length} |
+                <strong> Pending:</strong> {tasks.filter(t => !t.completed).length}
+            </div>
         </div>
     );
 };
