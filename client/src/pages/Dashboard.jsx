@@ -2,7 +2,10 @@ import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../components/Card';
 import TaskList from '../components/TaskList';
-import Schedule from '../components/Schedule';
+import Calendar from '../components/Calendar';
+import SearchBar from '../components/SearchBar';
+import CategoryManager from '../components/CategoryManager';
+import HabitsTracker from '../components/HabitsTracker';
 import SmartSuggestions from '../components/SmartSuggestions';
 import AuthContext from '../context/AuthContext';
 import Button from '../components/Button';
@@ -71,23 +74,39 @@ const Dashboard = () => {
                 </div>
             </header>
 
+            {/* Search Bar */}
+            <div style={{ marginBottom: 'var(--space-lg)' }}>
+                <SearchBar tasks={tasks} onTaskSelect={(task) => console.log('Selected:', task)} />
+            </div>
+
+            {/* Main Grid */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
                 gap: 'var(--space-lg)',
             }}>
+                {/* Left Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+                    {/* Habits Tracker */}
+                    <HabitsTracker />
+
+                    {/* Smart Suggestions */}
                     <SmartSuggestions tasks={tasks} user={user} />
 
+                    {/* Task List */}
                     <Card className="fade-in">
                         <TaskList />
                     </Card>
+                </div>
 
+                {/* Right Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+                    {/* Calendar */}
                     <Card className="fade-in">
-                        <h3>Daily Schedule</h3>
-                        <div style={{ marginTop: 'var(--space-md)' }}>
-                            <Schedule />
-                        </div>
+                        <Calendar
+                            tasks={tasks}
+                            onDateClick={(date) => console.log('Date clicked:', date)}
+                        />
                     </Card>
                 </div>
             </div>
