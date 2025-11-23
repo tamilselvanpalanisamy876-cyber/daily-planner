@@ -127,12 +127,37 @@ const SmartInput = ({ onTaskCreate }) => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (input.trim() && parsedData) {
-            onTaskCreate(parsedData);
+        console.log('🔘 Submit button clicked');
+        console.log('📝 Input:', input);
+        console.log('📊 Parsed data:', parsedData);
+
+        if (!input.trim()) {
+            alert('⚠️ Please enter a task!');
+            return;
+        }
+
+        if (!parsedData) {
+            alert('⚠️ Unable to parse task. Please try again.');
+            return;
+        }
+
+        if (!onTaskCreate) {
+            console.error('❌ onTaskCreate callback is not defined!');
+            alert('❌ Error: Task creation handler not found');
+            return;
+        }
+
+        try {
+            console.log('📤 Calling onTaskCreate with:', parsedData);
+            await onTaskCreate(parsedData);
+            console.log('✅ Task created successfully!');
             setInput('');
             setParsedData(null);
+        } catch (error) {
+            console.error('❌ Error in handleSubmit:', error);
+            alert(`❌ Failed to create task: ${error.message}`);
         }
     };
 
